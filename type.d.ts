@@ -1,12 +1,15 @@
 export interface ServerToClient{
-    serverMsg:(data:{message:string,room:string})=>void
+    serverMsg:(data:ClientMessage)=>void
 }
 
 export interface ClientToServer{
-    clientMsg:(data:{message:string,room:string})=>void,
+    clientMsg:(data:ClientMessage)=>void,
     connectUser:(data:{id:string,socket_id:string})=>void
 }
 
+export interface ClientMessage extends Message {
+ room:string
+}
 export interface User{
     avatar:string,
     name:string,
@@ -21,15 +24,19 @@ export interface Conversion{
     users:string[],
     icon:string,
     id:string,
+    user_id:string,
     conversionId:string,
     unread_Msg:number
 }
 export interface Message{
     from:string,
     to:string[],
+    reply_ID?:string,
     message:string,
-    time:Date,
-    attachment:string
+    id?:string,
+    user_id:string,
+    time?:Date,
+    attachment?:string | null
 }
 export interface active_user{
  id:string,

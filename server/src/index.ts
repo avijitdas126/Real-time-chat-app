@@ -7,13 +7,16 @@ import { ClientToServer, ServerToClient } from '../../type';
 import SocketExcetion from './socket/start';
 import mongoose from 'mongoose';
 import { MONGO_URL } from './export';
+import { clerkMiddleware } from "@clerk/express";
 
 const app = express()
 const httpServer = createServer(app);
 
 //Middleware
 app.use(cros());
+app.use(express.json());
 app.use('/v1', router);
+app.use(clerkMiddleware())
 const io = new Server<ClientToServer, ServerToClient>(httpServer, {
     cors: {
         origin: '*',
