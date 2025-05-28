@@ -3,6 +3,7 @@ import {
   ClerkProvider,
 } from '@clerk/nextjs'
 import "./globals.css";
+import { ConversionProvider } from "@/context";
 
 
 
@@ -37,12 +38,14 @@ export default function RootLayout({
 }>) {
   return (
    <ClerkProvider>
+    <ConversionProvider>
       <html lang="en">
         <body>
 
           {children}
         </body>
       </html>
+      </ConversionProvider>
     </ClerkProvider>
   );
 }

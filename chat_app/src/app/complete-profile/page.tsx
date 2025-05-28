@@ -1,7 +1,7 @@
 'use client';
 import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function CompleteProfile() {
   const { user, isLoaded } = useUser();
@@ -9,7 +9,11 @@ export default function CompleteProfile() {
   const [lastName, setLastName] = useState('');
   const [bio, setBio] = useState('');
   const router = useRouter();
-
+  useEffect(() => {
+    if (isLoaded && user && user.publicMetadata?.formCompleted) {
+      router.push("/");
+    }
+  }, [isLoaded, user]);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isLoaded || !user || !firstName || !lastName) {

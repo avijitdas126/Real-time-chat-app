@@ -1,6 +1,6 @@
 "use client";
 
-import Conversion from "@/components/conversion";
+import Conversions from "@/components/conversion";
 import ChatBox from "@/components/input";
 import Room from "@/components/room";
 import { useUser } from "@clerk/nextjs";
@@ -20,11 +20,11 @@ export default function Home() {
   return (
     <div className="flex">
       <div className="hidden lg:block w-[50vw] h-[100vh] bg-slate-800">
-        <Conversion />
+        <Conversions />
       </div>
       <div className="lg:w-[50vw] h-[100vh] w-[100vw] bg-slate-300 relative">
         <Room />
-        <ChatBox />
+        
       </div>
     </div>
   );

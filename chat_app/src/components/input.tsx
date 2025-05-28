@@ -1,9 +1,15 @@
 "use client";
 import { SendHorizonal } from "lucide-react";
-import React, { useRef } from "react";
+import React, { useContext, useRef } from "react";
 import { socket, uuid } from "./socket_con";
-
+import ConversionContext from "@/context";
 export default function ChatBox() {
+    const context = useContext(ConversionContext);
+
+if (!context) {
+  throw new Error("useConversionContext must be used within a ConversionProvider");
+}
+const { conversion, setConversion } = context;
   const sendMsg = (e: React.FormEvent) => {
     e.preventDefault();
     const message = chatbox.current?.value;
@@ -12,10 +18,11 @@ export default function ChatBox() {
     // Emit message to server
     socket.emit("clientMsg", {
       message,
-      room: "1",
-      from: uuid,
-      user_id: uuid,
-      to: ["11111"],
+      room: conversion!.room,
+      from: conversion!.user_id,
+      user_id: conversion!.user_id,
+      to: conversion!.conversionId,
+      is_to_readed:false,is_from_readed:true
     });
     chatbox.current!.value = "";
   };

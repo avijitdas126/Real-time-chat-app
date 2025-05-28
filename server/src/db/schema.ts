@@ -18,7 +18,8 @@ export const Users = mongoose.model('User', UserSchema);
 const ConversionSchema = new Schema<Conversion>(
     {
         isGroup: { type: Boolean, required: true },
-        users: { type: [String], required: true },
+        name:{ type: String, required: true },
+        room: { type: String, required: true },
         icon: { type: String, required: true },
         id: { type: String, required: true ,default:uuidv4()},
         user_id: { type: String, required: true },
@@ -32,7 +33,10 @@ export const Conversions = mongoose.model('Conversion', ConversionSchema);
 const MessageSchema = new Schema<Message>(
     {
         from: { type: String, required: true },
-        to: { type: [String], required: true },
+        room: { type: String, required: true },
+        is_from_readed: { type: Boolean, required: true, default: true },
+        is_to_readed: { type: Boolean, required: true, default: false },
+        to: { type: String, required: true },
         id: { type: String, required: true ,default:uuidv4()},
         user_id: { type: String, required: true },
         reply_ID: { type: String},
