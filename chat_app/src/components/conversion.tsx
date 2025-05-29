@@ -29,7 +29,7 @@ const { conversion, setConversion } = context;
       setconver(data)
     })
   },[user?.id,conversion?.id]);
-  
+const [currentConversationId, setcurrentConversationId] = useState('')
   // socket.emit('connectUser',{id:'11111', socket_id: socket.id })
   return (
     <>
@@ -63,6 +63,7 @@ const { conversion, setConversion } = context;
         <Search id={user?.id} />
 
         <div className="m-2">
+          <div className="grid overflow-y-auto scroll-smooth max-h-[80vh]">
           {conver.map((user:Conversion,index)=>{
             return (
                <div
@@ -71,7 +72,7 @@ const { conversion, setConversion } = context;
                     setConversion(user)
                   }}
                   id={user.id}
-                  className="flex items-center gap-3 bg-slate-400 text-white p-3 rounded-md shadow-md mb-2 hover:bg-slate-500 cursor-pointer"
+                  className={`flex items-center ${user.id?.includes(conversion?.id??'active_conversation')? `bg-slate-500 text-white` : 'bg-slate-800 text-white'} gap-3  border-b-2 border-white  p-3 shadow-md mb-2 hover:bg-slate-500 hover:text-white  cursor-pointer`}
                 >
                   <img
                     src={user.icon}
@@ -79,12 +80,13 @@ const { conversion, setConversion } = context;
                     className="w-10 h-10 rounded-full object-cover"
                   />
                   <div className="grid ">
-                    <span className="font-semibold">{user.name}</span>
+                    <span className="font-medium">{user.name}</span>
                     <span className="font-normal"></span>
                   </div>
                 </div>
             )
           })}
+        </div>
         </div>
       </div>
     </>

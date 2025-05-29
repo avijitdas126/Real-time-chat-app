@@ -19,10 +19,10 @@ export default function Home() {
 
   return (
     <div className="flex">
-      <div className="hidden lg:block w-[50vw] h-[100vh] bg-slate-800">
+      <div className="hidden lg:block w-[50vw] h-[100vh] bg-slate-800 border-r-2 border-white">
         <Conversions />
       </div>
-      <div className="lg:w-[50vw] h-[100vh] w-[100vw] bg-slate-300 relative">
+      <div className="lg:w-[50vw] h-[100vh] w-[100vw] bg-slate-800 relative">
         <Room />
         
       </div>

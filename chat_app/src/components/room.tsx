@@ -1,5 +1,5 @@
 "use client";
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { socket, uuid } from "./socket_con";
 import moment from "moment";
 import { ArrowLeft } from "lucide-react";
@@ -9,7 +9,7 @@ import ChatBox from "./input";
 import Image from "next/image";
 import { Message } from "../../../type";
 export default function Room() {
-  const {user}=useUser()
+  const { user } = useUser();
   const context = useContext(ConversionContext);
 
   if (!context) {
@@ -17,28 +17,36 @@ export default function Room() {
       "useConversionContext must be used within a ConversionProvider"
     );
   }
+  // const [isRoom, setisRoom] = useState(true)
+  interface FilteredMsg extends Message {
+    readStatus: "unread" | "read";
+  }
   const { conversion, setConversion } = context;
   const [allMessage, setallMessage] = useState<Message[]>([]);
   const [allunreadMsgs, setallunreadMsgs] = useState<Message[]>([]);
+ const showMsg = useRef<HTMLDivElement>(null);
 
+ 
   useEffect(() => {
     socket.emit("request", {
       room: conversion?.room,
-      from: conversion?.user_id,
+      id: conversion?.user_id,
     });
-    socket.on("getMessagesByRoom", (data) => {
-      setallMessage(data);
+    socket.on("getMessagesByRoom", (data: FilteredMsg[]) => {
+      const unreadMsgs = data.filter(
+        (m) => m.readStatus === "unread" && m.to === user?.id
+      );
+      const readMsgs = data.filter(
+        (m) => m.readStatus !== "unread" || m.from === user?.id
+      );
+      setallMessage(readMsgs);
+      setallunreadMsgs(unreadMsgs);
+      // console.log(data)
     });
   }, [conversion?.room, socket]);
-useEffect(() => {
-  // socket.emit('markAsRead', { room: conversion?.room, to:user?.id  });
-}, [conversion?.room,user?.id ])
-
   useEffect(() => {
-    socket.on("getUnreadMsgs", (data) => {
-      setallunreadMsgs(data);
-    });
-  }, [socket]);
+    socket.emit("markAsRead", { room: conversion?.room, to: user?.id });
+  }, [conversion?.room, user?.id]);
 
   const [msg, setmsg] = useState<
     {
@@ -57,7 +65,12 @@ useEffect(() => {
       reply_ID: "",
     },
   ]);
-
+ useEffect(() => {
+   if (showMsg.current) {
+    showMsg.current.scrollIntoView({ behavior: 'smooth' });
+    showMsg.current.scrollTop = showMsg.current.scrollHeight;
+  }
+ }, [allMessage,allunreadMsgs,msg])
   useEffect(() => {
     socket.on("serverMsg", ({ message, room, user_id, time, reply_ID }) => {
       // Ensure `time` and `reply_ID` are provided fallback values
@@ -78,8 +91,13 @@ useEffect(() => {
     <>
       {conversion ? (
         <React.Fragment key={"room"}>
-          <div className="absolute top-0 left-0 p-2 bg-blue-600 w-full flex text-white items-center gap-3">
-            <ArrowLeft className="cursor-pointer" />
+          <div className="absolute top-0 left-0 p-2 border-b-2 bg-slate-800 border-white w-full flex text-white items-center gap-3">
+            <ArrowLeft
+              className="cursor-pointer"
+              onClick={() => {
+                setConversion(null);
+              }}
+            />
 
             <img
               src={
@@ -96,7 +114,7 @@ useEffect(() => {
               <p className="text-sm">last seen 2:30pm</p>
             </div>
           </div>
-          <div className="grid mt-[75px] ">
+          <div className="grid mt-[75px] overflow-y-auto  scroll-smooth max-h-[75vh]" ref={showMsg}>
             {allMessage.map((elem, i) => (
               <React.Fragment key={i}>
                 {elem.user_id.length != 0 &&
@@ -107,7 +125,7 @@ useEffect(() => {
                         id="own"
                       >
                         {elem.message}
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-slate-500 text-right">
                           {moment(elem.time).format("hh:mm A")}{" "}
                         </div>
                       </div>
@@ -115,11 +133,11 @@ useEffect(() => {
                   ) : (
                     <div key={"child" + i} className="flex justify-start">
                       <div
-                        className="grid justify-items-start bg-white max-w-[80%] min-w-[20%] rounded  text-black p-3 m-2 "
+                        className="grid bg-white max-w-[80%] min-w-[20%] rounded  text-black p-3 m-2 "
                         id="others"
                       >
                         {elem.message}
-                        <div className="text-sm text-slate-500">
+                        <div className="text-sm text-slate-500 text-right">
                           {moment(elem.time).format("hh:mm A")}{" "}
                         </div>
                       </div>
@@ -138,7 +156,7 @@ useEffect(() => {
                         id="own"
                       >
                         {elem.message}
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-slate-500 text-right">
                           {moment(elem.time).format("hh:mm A")}{" "}
                         </div>
                       </div>
@@ -150,7 +168,7 @@ useEffect(() => {
                         id="others"
                       >
                         {elem.message}
-                        <div className="text-sm text-slate-500">
+                        <div className="text-sm text-slate-500 text-right">
                           {moment(elem.time).format("hh:mm A")}{" "}
                         </div>
                       </div>
@@ -158,7 +176,7 @@ useEffect(() => {
                   ))}
               </React.Fragment>
             ))}
-          </div>
+          
           {/*    Code on unread Msg */}
           {allunreadMsgs.length > 0 && (
             <React.Fragment key={"unread-msgs"}>
@@ -174,7 +192,7 @@ useEffect(() => {
                     id="others"
                   >
                     {elem.message}
-                    <div className="text-sm text-slate-500">
+                    <div className="text-sm text-slate-500 text-right">
                       {moment(elem.time).format("hh:mm A")}{" "}
                     </div>
                   </div>
@@ -182,7 +200,7 @@ useEffect(() => {
               ))}
             </React.Fragment>
           )}
-
+</div>
           <ChatBox />
         </React.Fragment>
       ) : (
@@ -195,13 +213,14 @@ useEffect(() => {
               height={320}
               className="mb-4"
             />
-            <p className="max-w-[220px] text-slate-600">
+            <p className="max-w-[220px] text-white">
               Welcome to <strong>YapMe</strong> — connect, chat, and enjoy
               real-time conversations!
             </p>
           </div>
         </React.Fragment>
       )}
+      
     </>
   );
 }

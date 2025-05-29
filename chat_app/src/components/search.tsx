@@ -83,11 +83,13 @@ const Search: React.FC<Id> = ({ id }) => {
                 <div
                   key={index}
                   onClick={()=>{
+                    if(!user.id.includes(id ?? '')){
                     socket.emit('addConversation',{isGroup:false, icon:user?.avatar, conversionId:user.id, user_id:id ?? '', unread_Msg:0,name:user.name,room:uuidv4()})
                     setisSearch(false)
                    searchbox.current!.value='';
+                    }
                   }}
-                  className="flex items-center gap-3 bg-slate-400 text-white p-3 rounded-md shadow-md mb-2 hover:bg-slate-500 cursor-pointer"
+                  className="flex items-center gap-3 bg-slate-800 border-b-2 border-white text-white p-3 shadow-md mb-2 hover:bg-slate-500 cursor-pointer"
                 >
                   <img
                     src={user.avatar}

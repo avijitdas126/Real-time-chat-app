@@ -40,15 +40,40 @@ export const addMessage = async ({ from, to, reply_ID, message, user_id, attachm
     console.log('Error at /db/action.ts at addMessage : ' + error)
   }
 }
-export const getMessages = async (room: string,) => {
+export const getMessages= async (
+  room: string,
+  currentUserId: string
+) => {
   try {
-    let messages = await Messages.find({ room }).sort({ time: 1 }); // Sort by timestamp
-    return messages;
+    // Get messages where:
+    // - User is sender (`from`)
+    // - OR User is receiver (`to`) and message is read or unread
+    const messages = await Messages.find({
+      room,
+      $or: [
+        { from: currentUserId },
+        { to: currentUserId },
+      ]
+    })
+      .sort({ time: 1 }) // Oldest to newest
+      .lean();
+
+    // Add custom `readStatus` field for frontend display
+    const taggedMessages = messages.map(msg => {
+      if (msg.to === currentUserId) {
+        return { ...msg, readStatus: msg.is_to_readed ? 'read' : 'unread' };
+      }
+      return msg; // Sender messages don’t need tag
+    });
+
+    return taggedMessages;
+
   } catch (error) {
-    console.log('Error at /db/action.ts at getMessages : ' + error)
-    return null;
+    console.error(`Error in getMessagesFiltered for room "${room}":`, error);
+    return [];
   }
-}
+};
+
 
 
 export const addConversation = async ({ isGroup = false,
@@ -70,7 +95,7 @@ export const addConversation = async ({ isGroup = false,
 export const getConversation = async (user_id: string) => {
   try {
     let getConversation = await Conversions.find({ user_id });
-    console.log(getConversation)
+    // console.log(getConversation)
     return getConversation;
   } catch (error) {
     console.log('Error at /db/action.ts at getConversation : ' + error)
@@ -144,9 +169,9 @@ export const getUsers = async () => {
   }
 }
 
-export const getUnreadMsgs = async (to:string,room:string|undefined) => {
+export const getUnreadMsgs = async (to:string) => {
   try {
-      const filter = { to, is_to_readed: false,room };
+      const filter = { to, is_to_readed: false };
     
     const res = await Messages.find(filter);
     return res;

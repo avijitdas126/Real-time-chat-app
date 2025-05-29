@@ -18,11 +18,13 @@ const { conversion, setConversion } = context;
     // Emit message to server
     socket.emit("clientMsg", {
       message,
+      time: new Date(),
       room: conversion!.room,
       from: conversion!.user_id,
       user_id: conversion!.user_id,
       to: conversion!.conversionId,
-      is_to_readed:false,is_from_readed:true
+      is_to_readed:false,
+      is_from_readed:true
     });
     chatbox.current!.value = "";
   };

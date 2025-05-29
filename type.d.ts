@@ -9,7 +9,7 @@ export interface ServerToClient {
 export interface ClientToServer {
     clientMsg: (data: Message) => void,
     connectUser: (data: { id: string, socket_id: string,room?:string }) => void,
-    request: (data: { isSearch?: boolean,room ?:string,from?:string}) => void, 
+    request: (data: { isSearch?: boolean,room ?:string,id?:string}) => void, 
     addConversation: (data: Conversion) => void,
     markAsRead:(data:{ room?:string, to?:string })=>void
 }
