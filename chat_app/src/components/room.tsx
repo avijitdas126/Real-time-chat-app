@@ -21,12 +21,39 @@ export default function Room() {
   interface FilteredMsg extends Message {
     readStatus: "unread" | "read";
   }
-  const { conversion, setConversion } = context;
-  const [allMessage, setallMessage] = useState<Message[]>([]);
-  const [allunreadMsgs, setallunreadMsgs] = useState<Message[]>([]);
- const showMsg = useRef<HTMLDivElement>(null);
 
- 
+  const { conversion, setConversion } = context;
+  const [allMessage, setallMessage] = useState<Map<string, FilteredMsg[]>>(
+    new Map()
+  );
+  const [allKeyMsg, setallKeyMsg] = useState<string[]>([]);
+  const [allunreadMsgs, setallunreadMsgs] = useState<
+    Map<string, FilteredMsg[]>
+  >(new Map());
+  const [allKeyUnMsg, setallKeyUnMsg] = useState<string[]>([]);
+  const [count, setcount] = useState<number>(0);
+  const showMsg = useRef<HTMLDivElement>(null);
+  const format = (messages: FilteredMsg[]) => {
+    const Msg = new Map<string, FilteredMsg[]>();
+    messages.map((message) => {
+      if (message.time) {
+        const now = moment();
+        const date = moment(message.time);
+
+        let key = "";
+        if (date.isSame(now, "day")) {
+          key = "Today";
+        } else if (date.isSame(now.clone().subtract(1, "day"), "day")) {
+          key = "Yesterday";
+        } else {
+          key = date.format("MMM DD, YYYY");
+        }
+        const existing = Msg.get(key) || [];
+        Msg.set(key, [...existing, message]);
+      }
+    });
+    return Msg;
+  };
   useEffect(() => {
     socket.emit("request", {
       room: conversion?.room,
@@ -39,9 +66,14 @@ export default function Room() {
       const readMsgs = data.filter(
         (m) => m.readStatus !== "unread" || m.from === user?.id
       );
-      setallMessage(readMsgs);
-      setallunreadMsgs(unreadMsgs);
-      // console.log(data)
+      const allMsg = format(readMsgs);
+      setallMessage(allMsg);
+      setallKeyMsg(Array.from(allMsg.keys()));
+      const count1 = unreadMsgs.length;
+      setcount(count1);
+      const allUnMsg = format(unreadMsgs);
+      setallunreadMsgs(allUnMsg);
+      setallKeyUnMsg(Array.from(allUnMsg.keys()));
     });
   }, [conversion?.room, socket]);
   useEffect(() => {
@@ -65,12 +97,12 @@ export default function Room() {
       reply_ID: "",
     },
   ]);
- useEffect(() => {
-   if (showMsg.current) {
-    showMsg.current.scrollIntoView({ behavior: 'smooth' });
-    showMsg.current.scrollTop = showMsg.current.scrollHeight;
-  }
- }, [allMessage,allunreadMsgs,msg])
+  useEffect(() => {
+    if (showMsg.current) {
+      showMsg.current.scrollIntoView({ behavior: "smooth" });
+      showMsg.current.scrollTop = showMsg.current.scrollHeight;
+    }
+  }, [allMessage, allunreadMsgs, msg]);
   useEffect(() => {
     socket.on("serverMsg", ({ message, room, user_id, time, reply_ID }) => {
       // Ensure `time` and `reply_ID` are provided fallback values
@@ -111,38 +143,45 @@ export default function Room() {
             />
             <div>
               <h1 className="text-lg font-semibold">{conversion?.name}</h1>
-              <p className="text-sm">last seen 2:30pm</p>
+              {/* <p className="text-sm">last seen 2:30pm</p> */}
             </div>
           </div>
-          <div className="grid mt-[75px] overflow-y-auto  scroll-smooth max-h-[75vh]" ref={showMsg}>
-            {allMessage.map((elem, i) => (
-              <React.Fragment key={i}>
-                {elem.user_id.length != 0 &&
-                  (elem.user_id.includes(conversion.user_id) ? (
-                    <div key={"child" + i} className="flex justify-end">
-                      <div
-                        className="grid justify-items-end bg-blue-200 max-w-[80%] min-w-[20%] rounded  text-black p-3 m-2 "
-                        id="own"
-                      >
-                        {elem.message}
-                        <div className="text-xs text-slate-500 text-right">
-                          {moment(elem.time).format("hh:mm A")}{" "}
+          <div
+            className="grid mt-[75px] overflow-y-auto  scroll-smooth max-h-[75vh]"
+            ref={showMsg}
+          >
+            {allKeyMsg.map((key, i) => (
+              <React.Fragment key={key}>
+                <center className="mt-4 ">
+                  <span className="bg-white font-bold text-black p-2 rounded w-[10%] shadow-sm">
+                    {key}
+                  </span>
+                </center>
+
+                {allMessage.get(key)?.map((elem, j) => (
+                  <React.Fragment key={key + j}>
+                    {elem.user_id?.length > 0 &&
+                      (elem.user_id.includes(conversion.user_id) ? (
+                        <div className="flex justify-end">
+                          <div className="grid justify-items-end bg-blue-200 max-w-[80%] min-w-[20%] rounded text-black p-3 m-2">
+                            {elem.message}
+                            <div className="text-xs text-slate-500 text-right">
+                              {moment(elem.time).format("hh:mm A")}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div key={"child" + i} className="flex justify-start">
-                      <div
-                        className="grid bg-white max-w-[80%] min-w-[20%] rounded  text-black p-3 m-2 "
-                        id="others"
-                      >
-                        {elem.message}
-                        <div className="text-sm text-slate-500 text-right">
-                          {moment(elem.time).format("hh:mm A")}{" "}
+                      ) : (
+                        <div className="flex justify-start">
+                          <div className="grid bg-white max-w-[80%] min-w-[20%] rounded text-black p-3 m-2">
+                            {elem.message}
+                            <div className="text-sm text-slate-500 text-right">
+                              {moment(elem.time).format("hh:mm A")}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  ))}
+                      ))}
+                  </React.Fragment>
+                ))}
               </React.Fragment>
             ))}
 
@@ -176,31 +215,42 @@ export default function Room() {
                   ))}
               </React.Fragment>
             ))}
-          
-          {/*    Code on unread Msg */}
-          {allunreadMsgs.length > 0 && (
-            <React.Fragment key={"unread-msgs"}>
-              <div className="p-2 w-full flex text-black bg-[#ffffff79] items-center justify-center my-2 j gap-3">
-                <span className="text-red-500 font-semibold">
-                  {allunreadMsgs.length} Unread Messages
-                </span>
-              </div>
-              {allunreadMsgs.map((elem, i) => (
-                <div key={"child" + i} className="flex justify-start">
-                  <div
-                    className="grid justify-items-end bg-white max-w-[80%] min-w-[20%] rounded  text-black p-3 m-2 "
-                    id="others"
-                  >
-                    {elem.message}
-                    <div className="text-sm text-slate-500 text-right">
-                      {moment(elem.time).format("hh:mm A")}{" "}
-                    </div>
-                  </div>
+
+            {/*    Code on unread Msg */}
+            {count > 0 && (
+              <React.Fragment key={"unread-msgs"}>
+                <div className="p-2 w-full flex text-black bg-[#ffffffee] items-center justify-center my-2 j gap-3">
+                  <span className="text-red-600 font-semibold">
+                    {count} Unread Messages
+                  </span>
                 </div>
-              ))}
-            </React.Fragment>
-          )}
-</div>
+                {allKeyUnMsg.map((elem) => (
+                  <React.Fragment key={elem}>
+                    <center className="mt-4 ">
+                      <span className="bg-white font-bold text-black p-2 rounded w-[10%] shadow-sm">
+                        {elem}
+                      </span>
+                    </center>
+                    {allunreadMsgs.get(elem)?.map((e, i) => (
+                      <React.Fragment key={i}>
+                        <div key={"child" + i} className="flex justify-start">
+                          <div
+                            className="grid justify-items-end bg-white max-w-[80%] min-w-[20%] rounded  text-black p-3 m-2 "
+                            id="others"
+                          >
+                            {e.message}
+                            <div className="text-sm text-slate-500 text-right">
+                              {moment(e.time).format("hh:mm A")}{" "}
+                            </div>
+                          </div>
+                        </div>
+                      </React.Fragment>
+                    ))}
+                  </React.Fragment>
+                ))}
+              </React.Fragment>
+            )}
+          </div>
           <ChatBox />
         </React.Fragment>
       ) : (
@@ -220,7 +270,6 @@ export default function Room() {
           </div>
         </React.Fragment>
       )}
-      
     </>
   );
 }

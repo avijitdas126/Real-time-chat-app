@@ -5,7 +5,7 @@
 
 import { DefaultEventsMap, Server, Socket } from "socket.io";
 import { ClientToServer, Message, ServerToClient, User } from "../../../type";
-import { addActiveUser, addConversation, addMessage, deleteActiveUser, getActiveUser, getallMsgs, getConversation, getMessages, getUnreadMsgs, getUser, getUsers } from "../db/action";
+import { addActiveUser, addConversation, addMessage, deleteActiveUser, deleteConversation, getActiveUser, getallMsgs, getConversation, getMessages, getUnfriendUsers, getUnreadMsgs, getUser, getUsers, updateConversion } from "../db/action";
 import { Conversions, Messages } from "../db/schema";
 
 export default function SocketExcetion(io: Server<ClientToServer, ServerToClient, DefaultEventsMap, any>) {
@@ -26,20 +26,18 @@ export default function SocketExcetion(io: Server<ClientToServer, ServerToClient
                     // Check if the room already exists in the set
                     let isConversionPresent = await Conversions.find({ room: elem.room, user_id: id })
                     if (!isConversionPresent.length) {
-
-
                         if (!roomSet.has(elem.room)) {
                             roomSet.add(elem.room);
 
                             const userdetails = await getUser(elem.from) as User;
-
+                            console.log('userDetails: ', userdetails);
                             await addConversation({
                                 isGroup: false,
-                                icon: userdetails.avatar,
+                                icon: userdetails?.avatar,
                                 user_id: id,
-                                conversionId: userdetails.id,
+                                conversionId: userdetails?.id,
                                 unread_Msg: 0,
-                                name: userdetails.name,
+                                name: userdetails?.name,
                                 room: elem.room,
                             });
                         }
@@ -65,23 +63,16 @@ export default function SocketExcetion(io: Server<ClientToServer, ServerToClient
             is_to_readed = recipientActive;
             is_from_readed = true;
 
-            let res = await addMessage({ from, to, reply_ID, message, user_id,time, is_to_readed, is_from_readed, room })
+            let res = await addMessage({ from, to, reply_ID, message, user_id, time, is_to_readed, is_from_readed, room })
             console.log(socket.id + ' : ' + message)
-             // Update unread count for receiver if not active
-            if (!recipientActive) {
-                await Conversions.updateOne(
-                    { user_id: to, room },
-                    { $inc: { unread_Msg: 1 } },
-                    { upsert: true }
-                );
-            }
-
+            await updateConversion(room)
+            // Update unread count for receiver if not active
             io.to(room).emit("serverMsg", { from, user_id, reply_ID, to, message, room, is_to_readed, is_from_readed })
         })
-        socket.on('request', async ({ isSearch = false, room = null, id='' }) => {
+        socket.on('request', async ({ isSearch = false, room = null, id = '' }) => {
             if (isSearch) {
-                let getUser = await getUsers();
-                socket.emit('getAllUsers', getUser)
+                let getUser = await getUnfriendUsers(id);
+                socket.emit('getUnfriendUsers', getUser)
             }
             if (room) {
                 const messages = await getMessages(room, id); // removed `from`
@@ -117,7 +108,9 @@ export default function SocketExcetion(io: Server<ClientToServer, ServerToClient
                 console.error('Error in markAsRead:', error);
             }
         });
-
+       socket.on('deleteConversation',async (data)=>{
+        await deleteConversation(data)
+       })
         socket.on('disconnect', () => {
             deleteActiveUser(socket.id)
             console.log(`Socket disconnected: ${socket.id}`);

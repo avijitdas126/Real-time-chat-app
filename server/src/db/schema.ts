@@ -21,6 +21,7 @@ const ConversionSchema = new Schema<Conversion>(
         name:{ type: String, required: true },
         room: { type: String, required: true },
         icon: { type: String, required: true },
+        time:{ type: Date, required: true, default: Date.now() },
         id: { type: String, required: true ,default:uuidv4()},
         user_id: { type: String, required: true },
         conversionId: { type: String, required: true },

@@ -4,6 +4,8 @@ export interface ServerToClient {
     getConversion: (data) => void,
     getMessagesByRoom:(data)=>void,
     getUnreadMsgs:(data)=>void,
+    getUnfriendUsers:(data)=>void,
+    
 }
 
 export interface ClientToServer {
@@ -11,7 +13,8 @@ export interface ClientToServer {
     connectUser: (data: { id: string, socket_id: string,room?:string }) => void,
     request: (data: { isSearch?: boolean,room ?:string,id?:string}) => void, 
     addConversation: (data: Conversion) => void,
-    markAsRead:(data:{ room?:string, to?:string })=>void
+    markAsRead:(data:{ room?:string, to?:string })=>void,
+    deleteConversation:(data)=>void,
 }
 
 export interface User {
@@ -29,6 +32,7 @@ export interface Conversion {
     icon: string,
     id?: string,
     user_id: string,
+    time?:string,
     conversionId: string,
     unread_Msg?: number,
     name: string

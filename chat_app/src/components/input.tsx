@@ -10,21 +10,22 @@ if (!context) {
   throw new Error("useConversionContext must be used within a ConversionProvider");
 }
 const { conversion, setConversion } = context;
+console.log(conversion); 
   const sendMsg = (e: React.FormEvent) => {
     e.preventDefault();
     const message = chatbox.current?.value;
     if (!message) return;
-    console.log(socket.id);
+    console.log(socket.id); 
     // Emit message to server
     socket.emit("clientMsg", {
       message,
       time: new Date(),
       room: conversion!.room,
-      from: conversion!.user_id,
+      from: conversion!.user_id, 
       user_id: conversion!.user_id,
       to: conversion!.conversionId,
-      is_to_readed:false,
-      is_from_readed:true
+      is_to_readed: false,
+      is_from_readed: true
     });
     chatbox.current!.value = "";
   };
@@ -36,7 +37,7 @@ const { conversion, setConversion } = context;
           <input
             type="text"
             ref={chatbox}
-            className="border-2 border-black px-2 py-1 border-solid w-[90%]  "
+            className="border-1 border-black px-2 rounded py-1 border-solid w-[90%]  "
             placeholder="Message"
           />
           <button

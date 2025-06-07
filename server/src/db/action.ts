@@ -31,16 +31,16 @@ export const deleteActiveUser = async (socket_id: string): Promise<void> => {
   }
 }
 
-export const addMessage = async ({ from, to, reply_ID, message, user_id, attachment = null, is_to_readed,room }: Message): Promise<void> => {
+export const addMessage = async ({ from, to, reply_ID, message, user_id, attachment = null, is_to_readed, room }: Message): Promise<void> => {
   try {
-    let addMessages = new Messages({ from, to, reply_ID, user_id, message, attachment, is_to_readed,room })
+    let addMessages = new Messages({ from, to, reply_ID, user_id, message, attachment, is_to_readed, room })
     let res = await addMessages.save()
     console.log(res)
   } catch (error) {
     console.log('Error at /db/action.ts at addMessage : ' + error)
   }
 }
-export const getMessages= async (
+export const getMessages = async (
   room: string,
   currentUserId: string
 ) => {
@@ -95,17 +95,29 @@ export const addConversation = async ({ isGroup = false,
 export const getConversation = async (user_id: string) => {
   try {
     let getConversation = await Conversions.find({ user_id });
+
+    const result = await Promise.all(getConversation.map(async (conv) => {
+      let lastMsgs = await Messages.find({ room: conv.room })
+      const n = lastMsgs.length
+      let lastMsg = lastMsgs[n - 1]
+      const unreadCount = await Messages.countDocuments({ room: conv.room, to: user_id, is_to_readed: false })
+      return {
+        ...conv.toObject(),
+        lastMessage: lastMsg || null,
+        unread_Msg: unreadCount
+      }
+    }))
     // console.log(getConversation)
-    return getConversation;
+    return result;
   } catch (error) {
     console.log('Error at /db/action.ts at getConversation : ' + error)
     return null;
   }
 }
 
-export const getActiveUser = async (id:string) :Promise<number>=> {
+export const getActiveUser = async (id: string): Promise<number> => {
   try {
-    let getActiveUser = await Active_Users.find({id});
+    let getActiveUser = await Active_Users.find({ id });
     return (getActiveUser.length);
   } catch (error) {
     console.log('Error at /db/action.ts at getActiveUsers : ' + error)
@@ -113,9 +125,9 @@ export const getActiveUser = async (id:string) :Promise<number>=> {
   }
 }
 
-export const deleteConversation = async (id: string) => {
+export const deleteConversation = async (id: string[]) => {
   try {
-    let res = await Conversions.deleteOne({ id });
+    let res = await Conversions.deleteMany({ id });
     console.log(res)
   } catch (error) {
     console.log('Error at /db/action.ts at deleteConversation : ' + error)
@@ -150,7 +162,7 @@ export const addUser = async ({ avatar, name, phone_no = '', email, id, bio = ''
 
 }
 
-export const getUser = async ( id:string ) => {
+export const getUser = async (id: string) => {
   try {
     let getUser = await Users.findOne({ id })
     console.log(getUser)
@@ -169,18 +181,18 @@ export const getUsers = async () => {
   }
 }
 
-export const getUnreadMsgs = async (to:string) => {
+export const getUnreadMsgs = async (to: string) => {
   try {
-      const filter = { to, is_to_readed: false };
-    
+    const filter = { to, is_to_readed: false };
+
     const res = await Messages.find(filter);
     return res;
   }
-   catch (error) {
+  catch (error) {
     console.log('Error at /db/action.ts at getUnreadMsgs : ' + error)
   }
 }
-export const getallMsgs = async (room: string|undefined) => {
+export const getallMsgs = async (room: string | undefined) => {
   try {
     let res = await Messages.find({ room });
     console.log(res);
@@ -188,5 +200,28 @@ export const getallMsgs = async (room: string|undefined) => {
   } catch (error) {
     console.log('Error at /db/action.ts at getallMsgs : ' + error)
     return null;
+  }
+}
+
+export const getUnfriendUsers = async (id: string,) => {
+  try {
+    let getUsers = await Conversions.find({ user_id: id })
+    const friends = getUsers.map((e) => e.conversionId)
+    friends.push(id)
+    let unfriends = await Users.find({
+      id: { $nin: friends }
+    }).lean()
+    return unfriends;
+  } catch (error) {
+    console.log('Error at /db/action.ts at getUnfriendUsers : ' + error)
+  }
+}
+
+export const updateConversion = async (room:string) => {
+  try {
+   let updateConversion=await Conversions.updateMany({room:room},{$set:{time:Date.now()}})
+   console.log(updateConversion)
+  } catch (error) {
+    console.log('Error at /db/action.ts at updateConversion : ' + error)
   }
 }
