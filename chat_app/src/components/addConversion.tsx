@@ -4,6 +4,7 @@ import { User } from "../../../type";
 import { v4 as uuidv4 } from "uuid";
 import { ArrowLeft, LoaderPinwheel, SearchIcon } from "lucide-react";
 import { except, socket, uuid } from "./socket_con";
+import Link from "next/link";
 type Id = {
   id: string | undefined;
   onReload:(data:boolean)=>void
@@ -102,11 +103,13 @@ const AddNewFriend: React.FC<Id> = ({ id ,onReload}) => {
               className="flex items-center gap-3 justify-between bg-slate-800 border-b-2 border-white text-white p-3 shadow-md mb-2 hover:bg-slate-500 cursor-pointer"
             >
               <div className="flex items-center gap-3">
+                <Link href={`/profile/${user.id}`} >
                 <img
                   src={user.avatar}
                   alt={user.name || "User Avatar"}
                   className="w-10 h-10 rounded-full object-cover"
                 />
+                </Link>
                 <div className="grid ">
                   <span className="font-semibold">{user.name}</span>
                   <span className="font-normal">{except(20, user?.bio)}</span>

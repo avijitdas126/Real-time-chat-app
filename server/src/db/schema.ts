@@ -1,5 +1,5 @@
 import mongoose, { Schema, Model } from 'mongoose'
-import { active_user, Conversion, Message, User } from '../../../type'
+import { active_user, Conversion, Delete, Message, User } from '../../../type'
 import {v4 as uuidv4} from 'uuid'
 const UserSchema = new Schema<User>(
     {
@@ -41,7 +41,7 @@ const MessageSchema = new Schema<Message>(
         id: { type: String, required: true ,default:uuidv4()},
         user_id: { type: String, required: true },
         reply_ID: { type: String},
-        message: { type: String, required: true },
+        message: { type: String, default:null },
         time: { type: Date, required: true, default: Date.now() },
         attachment: { type: String }
 
@@ -57,6 +57,17 @@ const active_userSchema = new Schema<active_user>(
         socket_id: { type: String, required: true }
     })
 
+    
 export const Active_Users: Model<active_user> =
     mongoose.models.Active_User || mongoose.model<active_user>('Active_User', active_userSchema);
 
+const deleteMsgs = new Schema<Delete>(
+    {
+        id: { type: String, required: true, ref: "Message" },
+        is_to_delete: { type: Boolean, default: false },
+        is_form_delete: { type: Boolean, default: false },
+        user_id: { type: String, required: true },
+        room: { type: String, required: true }
+    }
+)
+export const DeleteMsgs = mongoose.model('Delete_Message', deleteMsgs);

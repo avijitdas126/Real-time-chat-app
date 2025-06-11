@@ -1,5 +1,5 @@
 import mongoose from "mongoose"
-import { Active_Users, Conversions, Messages, Users } from "./schema"
+import { Active_Users, Conversions, DeleteMsgs, Messages, Users } from "./schema"
 import { Conversion, Message, User } from "../../../type"
 
 /**
@@ -35,7 +35,9 @@ export const addMessage = async ({ from, to, reply_ID, message, user_id, attachm
   try {
     let addMessages = new Messages({ from, to, reply_ID, user_id, message, attachment, is_to_readed, room })
     let res = await addMessages.save()
-    console.log(res)
+    let del = new DeleteMsgs({ id: res.id, room })
+    let delRes = await del.save()
+    console.log(delRes)
   } catch (error) {
     console.log('Error at /db/action.ts at addMessage : ' + error)
   }
@@ -57,14 +59,16 @@ export const getMessages = async (
     })
       .sort({ time: 1 }) // Oldest to newest
       .lean();
-
+    // const deleted = await DeleteMsgs.find({ room }).lean();
+    // Create a Set of deleted message UUIDs
     // Add custom `readStatus` field for frontend display
-    const taggedMessages = messages.map(msg => {
+    let taggedMessages = messages.map(msg => {
       if (msg.to === currentUserId) {
         return { ...msg, readStatus: msg.is_to_readed ? 'read' : 'unread' };
       }
       return msg; // Sender messages don’t need tag
     });
+
 
     return taggedMessages;
 
@@ -101,6 +105,9 @@ export const getConversation = async (user_id: string) => {
       const n = lastMsgs.length
       let lastMsg = lastMsgs[n - 1]
       const unreadCount = await Messages.countDocuments({ room: conv.room, to: user_id, is_to_readed: false })
+      if (lastMsg.attachment) {
+        lastMsg.message = "Image"
+      }
       return {
         ...conv.toObject(),
         lastMessage: lastMsg || null,
@@ -165,7 +172,6 @@ export const addUser = async ({ avatar, name, phone_no = '', email, id, bio = ''
 export const getUser = async (id: string) => {
   try {
     let getUser = await Users.findOne({ id })
-    console.log(getUser)
     return getUser;
   } catch (error) {
     console.log('Error at /db/action.ts at getUser : ' + error)
@@ -217,11 +223,44 @@ export const getUnfriendUsers = async (id: string,) => {
   }
 }
 
-export const updateConversion = async (room:string) => {
+export const updateConversion = async (room: string) => {
   try {
-   let updateConversion=await Conversions.updateMany({room:room},{$set:{time:Date.now()}})
-   console.log(updateConversion)
+    let updateConversion = await Conversions.updateMany({ room: room }, { $set: { time: Date.now() } })
+    console.log(updateConversion)
   } catch (error) {
     console.log('Error at /db/action.ts at updateConversion : ' + error)
+  }
+}
+
+export const updateUser = async (id: string, bio: string, avatar: string, phone_no: string) => {
+  try {
+
+    let user = await Users.updateOne({ id }, { $set: { bio, avatar, phone_no } })
+    if (avatar) {
+      let res = await Conversions.updateMany({ conversionId: id }, { $set: { icon: avatar } })
+    }
+    return user
+  } catch (error) {
+    console.log('Error at /db/action.ts at updateUser : ' + error)
+  }
+}
+
+export const deleteMsgs = async (id: string[], room: string, user_id: string) => {
+  try {
+
+    const bulkOps = id.map(item => ({
+      updateOne: {
+        filter: { userId: item }, // check if exists by this field
+        update: { $set: { id, room, user_id } },
+        upsert: true, // create if not exists
+      }
+    }));
+    let delMsg = await DeleteMsgs.bulkWrite(bulkOps);
+    console.log(delMsg)
+    return delMsg
+
+
+  } catch (error) {
+    console.log('Error at /db/action.ts at deleteMsgs : ' + error)
   }
 }

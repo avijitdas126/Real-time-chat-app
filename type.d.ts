@@ -15,6 +15,7 @@ export interface ClientToServer {
     addConversation: (data: Conversion) => void,
     markAsRead:(data:{ room?:string, to?:string })=>void,
     deleteConversation:(data)=>void,
+    deleteMessage:(data)=>void,
 }
 
 export interface User {
@@ -41,7 +42,7 @@ export interface Message {
     from: string,
     to: string,
     reply_ID?: string,
-    message: string,
+    message: string | null,
     room: string,
     id?: string,
     user_id: string,
@@ -55,3 +56,10 @@ export interface active_user {
     socket_id: string
 }
 
+export interface Delete {
+    room:string,
+id:string,
+is_to_delete:boolean,
+is_form_delete:boolean,
+    user_id:string
+}

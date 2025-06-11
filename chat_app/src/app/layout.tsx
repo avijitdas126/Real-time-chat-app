@@ -4,6 +4,7 @@ import {
 } from '@clerk/nextjs'
 import "./globals.css";
 import { ConversionProvider } from "@/context";
+import Head from "next/head";
 
 
 
@@ -40,6 +41,9 @@ export default function RootLayout({
    <ClerkProvider>
     <ConversionProvider>
       <html lang="en">
+        <head>
+          <link rel="icon" href="favicon.ico"  />
+        </head>
         <body>
 
           {children}

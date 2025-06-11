@@ -4,6 +4,7 @@ import { except, socket, uuid } from "./socket_con";
 import { SignOutButton, useUser } from "@clerk/nextjs";
 import {
   ArrowLeft,
+  Loader,
   LoaderPinwheel,
   LogOut,
   Plus,
@@ -17,6 +18,7 @@ import { Conversion, Message } from "../../../type";
 import ConversionContext from "@/context";
 import { IConversionContext } from "@/context";
 import AddNewFriend from "./addConversion";
+import Link from "next/link";
 
 export default function Conversions() {
   const context = useContext(ConversionContext);
@@ -44,7 +46,7 @@ export default function Conversions() {
   const [users, setUsers] = useState<getConversions[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<getConversions[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-
+  const [loading, setLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const searchbox = useRef<HTMLInputElement>(null);
   // add conversion
@@ -52,14 +54,14 @@ export default function Conversions() {
     setisSearch(!isSearch);
   };
 
-
-  const handleMessage = (data:boolean) => {
-    if(data){
-      setisSearch(false)
+  const handleMessage = (data: boolean) => {
+    if (data) {
+      setisSearch(false);
     }
     setreload(data);
   };
   useEffect(() => {
+    setLoading(true);
     socket.emit("connectUser", {
       id: user?.id || uuid,
       socket_id: socket.id!,
@@ -74,6 +76,7 @@ export default function Conversions() {
       });
       setconver(data);
       setUsers(data);
+      setLoading(false);
     });
   }, [user?.id, conversion?.id, reload]);
   const handleMouseEvent = (
@@ -141,9 +144,12 @@ export default function Conversions() {
           {isOpen && (
             <div className="absolute z-10 mt-2 w-44 rounded-md shadow-lg  top-7 left-[35vw] bg-white ring-1 ring-black ring-opacity-5">
               <div className="py-1 text-sm text-gray-700">
-                <a href="#" className=" px-4 py-2 hover:bg-gray-100 flex gap-3">
+                <Link
+                  href="/profile"
+                  className=" px-4 py-2 hover:bg-gray-100 flex gap-3"
+                >
                   <User /> Profile
-                </a>
+                </Link>
                 <SignOutButton>
                   <button className=" px-4 py-2 hover:bg-gray-100 flex gap-3">
                     <LogOut /> Logout
@@ -221,90 +227,107 @@ export default function Conversions() {
               )
             ) : (
               <>
-                {conver.length == 0 && (
-                  <div className="flex flex-col justify-center items-center w-full h-[70vh] mt-[5vh] text-center text-white font-medium text-xl">
-                    <center>
-                      <p>No one added friend in your Conversation</p>
-                      <button
-                        onClick={handleEvent}
-                        title="Add New Conversion"
-                        className="flex gap-4 rounded p-2 mt-1 hover:bg-blue-600 content-center bg-blue-500 text-white font-normal"
-                      >
-                        <Plus /> Add New Conversion
-                      </button>
-                    </center>
+                {loading ? (
+                  <>
+                  <div className="flex justify-center p-2">
+                    <Loader  size={50} className="text-white animate-spin mt-[35vh]" />
                   </div>
-                )}
-                {conver.map((user: getConversions, index) => {
-                  return (
-                    <div
-                      key={index}
-                      onClick={() => {
-                        if (!isDelete) {
-                          setConversion(user);
-                          setseenConversion((prev) => [
-                            ...prev,
-                            user?.conversionId,
-                          ]);
-                        }
-                      }}
-                      id={user.id}
-                      onContextMenu={handleMouseEvent}
-                      className={`flex items-center ${
-                        user.id?.includes(
-                          conversion?.id ?? "active_conversation"
-                        )
-                          ? `bg-slate-500 text-white`
-                          : "bg-slate-800 text-white"
-                      } gap-3 justify-between border-b-2 border-white  p-3 shadow-md mb-2 hover:bg-slate-500 hover:text-white  cursor-pointer`}
-                    >
-                      <div className="flex items-center gap-3">
-                        {isDelete && (
-                          <input
-                            type="checkbox"
-                            name="delete"
-                            id={user.id}
-                            defaultChecked={currentId?.includes(user.id || "")}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setselectedId((pre) => [...pre, user.id ?? ""]);
-                              } else {
-                                setselectedId((pre) =>
-                                  pre.filter((item) => item !== user.id)
-                                );
-                              }
-                            }}
-                          />
-                        )}
-                        <img
-                          src={user.icon}
-                          alt={user.name || "User Avatar"}
-                          className="w-10 h-10 rounded-full object-cover"
-                        />
-                        <div className="grid ">
-                          <span className="font-medium">{user.name}</span>
-                          <span className="font-normal">
-                            {except(20, user.lastMessage?.message)}
-                          </span>
-                        </div>
+                  </>
+                ) : (
+                  <>
+                    {(conver.length == 0 && loading == false) && (
+                      <div className="flex flex-col justify-center items-center w-full h-[70vh] mt-[5vh] text-center text-white font-medium text-xl">
+                        <center>
+                          <p>No one added friend in your Conversation</p>
+                          <button
+                            onClick={handleEvent}
+                            title="Add New Conversion"
+                            className="flex gap-4 rounded p-2 mt-1 hover:bg-blue-600 content-center bg-blue-500 text-white font-normal"
+                          >
+                            <Plus /> Add New Conversion
+                          </button>
+                        </center>
                       </div>
+                    )}
+                    {conver.map((user: getConversions, index) => {
+                      return (
+                        <div
+                          key={index}
+                          onClick={() => {
+                            if (!isDelete) {
+                              setConversion(user);
+                              setseenConversion((prev) => [
+                                ...prev,
+                                user?.conversionId,
+                              ]);
+                            }
+                          }}
+                          id={user.id}
+                          onContextMenu={handleMouseEvent}
+                          className={`flex items-center ${
+                            user.id?.includes(
+                              conversion?.id ?? "active_conversation"
+                            )
+                              ? `bg-slate-500 text-white`
+                              : "bg-slate-800 text-white"
+                          } gap-3 justify-between border-b-2 border-white  p-3 shadow-md mb-2 hover:bg-slate-500 hover:text-white  cursor-pointer`}
+                        >
+                          <div className="flex items-center gap-3">
+                            {isDelete && (
+                              <input
+                                type="checkbox"
+                                name="delete"
+                                id={user.id}
+                                defaultChecked={currentId?.includes(
+                                  user.id || ""
+                                )}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setselectedId((pre) => [
+                                      ...pre,
+                                      user.id ?? "",
+                                    ]);
+                                  } else {
+                                    setselectedId((pre) =>
+                                      pre.filter((item) => item !== user.id)
+                                    );
+                                  }
+                                }}
+                              />
+                            )}
+                            <Link href={`/profile/${user.conversionId}`}>
+                              <img
+                                src={user.icon}
+                                alt={user.name || "User Avatar"}
+                                className="w-10 h-10 rounded-full object-cover"
+                              />
+                            </Link>
+                            <div className="grid ">
+                              <span className="font-medium">{user.name}</span>
+                              <span className="font-normal">
+                                {except(20, user.lastMessage?.message)}
+                              </span>
+                            </div>
+                          </div>
 
-                      {!!user.unread_Msg &&
-                        !user.conversionId?.includes(
-                          conversion?.conversionId || "selected conversion"
-                        ) &&
-                        !seenConversion.filter((e) => {
-                          return (
-                            e && e.includes && e.includes(user.conversionId)
-                          );
-                        }).length && (
-                          <span className="bg-blue-500 text-white w-10 h-10 rounded-full flex items-center justify-center text-sm">
-                            {user.unread_Msg > 99 ? "99+" : user.unread_Msg}
-                          </span>
-                        )}
-                    </div>
-                  );
-                })}
+                          {!!user.unread_Msg &&
+                            !user.conversionId?.includes(
+                              conversion?.conversionId || "selected conversion"
+                            ) &&
+                            !seenConversion.filter((e) => {
+                              return (
+                                e && e.includes && e.includes(user.conversionId)
+                              );
+                            }).length && (
+                              <span className="bg-blue-500 text-white w-10 h-10 rounded-full flex items-center justify-center text-sm">
+                                {user.unread_Msg > 99 ? "99+" : user.unread_Msg}
+                              </span>
+                            )}
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
               </>
             )}
           </div>

@@ -2,12 +2,13 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { socket, uuid } from "./socket_con";
 import moment from "moment";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import ConversionContext from "@/context";
 import ChatBox from "./input";
 import Image from "next/image";
 import { Message } from "../../../type";
+import Link from "next/link";
 export default function Room() {
   const { user } = useUser();
   const context = useContext(ConversionContext);
@@ -17,7 +18,7 @@ export default function Room() {
       "useConversionContext must be used within a ConversionProvider"
     );
   }
-  // const [isRoom, setisRoom] = useState(true)
+
   interface FilteredMsg extends Message {
     readStatus: "unread" | "read";
   }
@@ -26,7 +27,9 @@ export default function Room() {
   const [allMessage, setallMessage] = useState<Map<string, FilteredMsg[]>>(
     new Map()
   );
+  const [OpenImage, setOpenImage] = useState(false);
   const [allKeyMsg, setallKeyMsg] = useState<string[]>([]);
+  const [selectImage, setselectImage] = useState("/blank.png");
   const [allunreadMsgs, setallunreadMsgs] = useState<
     Map<string, FilteredMsg[]>
   >(new Map());
@@ -54,6 +57,13 @@ export default function Room() {
     });
     return Msg;
   };
+  const onHandle = (attachment: string | undefined | null) => {
+    if (attachment) {
+      setOpenImage(!OpenImage);
+      setselectImage(attachment);
+    }
+  };
+
   useEffect(() => {
     socket.emit("request", {
       room: conversion?.room,
@@ -84,6 +94,7 @@ export default function Room() {
     {
       message: string;
       user_id: string;
+      attachment: string;
       time: Date | number;
       room: string;
       reply_ID: string;
@@ -92,6 +103,7 @@ export default function Room() {
     {
       message: "",
       user_id: "",
+      attachment: "",
       time: 0,
       room: "",
       reply_ID: "",
@@ -104,19 +116,23 @@ export default function Room() {
     }
   }, [allMessage, allunreadMsgs, msg]);
   useEffect(() => {
-    socket.on("serverMsg", ({ message, room, user_id, time, reply_ID }) => {
-      // Ensure `time` and `reply_ID` are provided fallback values
-      setmsg((prev) => [
-        ...prev,
-        {
-          message: message || "",
-          user_id: user_id || "",
-          time: time ?? new Date(), // Fallback to current time if undefined
-          room: room || "",
-          reply_ID: reply_ID || "", // Fallback to empty string if undefined
-        },
-      ]);
-    });
+    socket.on(
+      "serverMsg",
+      ({ message, room, user_id, time, reply_ID, attachment }) => {
+        // Ensure `time` and `reply_ID` are provided fallback values
+        setmsg((prev) => [
+          ...prev,
+          {
+            message: message || "",
+            user_id: user_id || "",
+            attachment: attachment || "",
+            time: time ?? new Date(), // Fallback to current time if undefined
+            room: room || "",
+            reply_ID: reply_ID || "", // Fallback to empty string if undefined
+          },
+        ]);
+      }
+    );
   }, []);
 
   return (
@@ -130,17 +146,42 @@ export default function Room() {
                 setConversion(null);
               }}
             />
+            {OpenImage && (
+              <>
+                <div>
+                  <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center">
+                    {/* Close Button */}
+                    <button
+                      onClick={() => {
+                        setOpenImage(false);
+                      }}
+                      className="absolute top-4 right-4 text-white text-2xl hover:text-gray-300"
+                    >
+                      <X />
+                    </button>
 
-            <img
-              src={
-                conversion?.icon ||
-                "https://avatars.githubusercontent.com/u/123456789?v=4"
-              }
-              alt="Logo"
-              width={50}
-              height={50}
-              className="rounded-full cursor-pointer"
-            />
+                    {/* Image */}
+                    <img
+                      src={selectImage}
+                      className="max-w-full max-h-full rounded-lg shadow-lg"
+                      alt="Preview"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+            <Link href={`/profile/${conversion.conversionId}`}>
+              <img
+                src={
+                  conversion?.icon ||
+                  "https://avatars.githubusercontent.com/u/123456789?v=4"
+                }
+                alt="Logo"
+                width={50}
+                height={50}
+                className="rounded-full cursor-pointer"
+              />
+            </Link>
             <div>
               <h1 className="text-lg font-semibold">{conversion?.name}</h1>
               {/* <p className="text-sm">last seen 2:30pm</p> */}
@@ -162,23 +203,79 @@ export default function Room() {
                   <React.Fragment key={key + j}>
                     {elem.user_id?.length > 0 &&
                       (elem.user_id.includes(conversion.user_id) ? (
-                        <div className="flex justify-end">
-                          <div className="grid justify-items-end bg-blue-200 max-w-[80%] min-w-[20%] rounded text-black p-3 m-2">
-                            {elem.message}
-                            <div className="text-xs text-slate-500 text-right">
-                              {moment(elem.time).format("hh:mm A")}
+                        <React.Fragment key={"image"}>
+                          {elem.attachment == null ? (
+                            <div className="flex justify-end">
+                              <div className="grid justify-items-end bg-blue-200 max-w-[80%] min-w-[20%] rounded text-black p-3 m-2">
+                                {elem.message}
+                                <div className="text-xs text-slate-500 text-right">
+                                  {moment(elem.time).format("hh:mm A")}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
+                          ) : (
+                            <div className="flex justify-end">
+                              <div className="bg-blue-200 rounded-lg p-2 m-2 shadow-md max-w-[80%] min-w-[20%] text-black space-y-2">
+                                {/* Optional attachment image */}
+                                {elem.attachment && (
+                                  <img
+                                    onClick={() => onHandle(elem.attachment)}
+                                    src={elem.attachment}
+                                    alt="attachment"
+                                    className="w-full max-w-xs rounded-md object-cover cursor-pointer"
+                                  />
+                                )}
+
+                                {/* Message & timestamp */}
+                                <div className=" rounded-lg px-4 py-2 text-right">
+                                  <p className="whitespace-pre-wrap break-words">
+                                    {elem.message}
+                                  </p>
+                                  <div className="text-xs text-slate-600 mt-1">
+                                    {moment(elem.time).format("hh:mm A")}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </React.Fragment>
                       ) : (
-                        <div className="flex justify-start">
-                          <div className="grid bg-white max-w-[80%] min-w-[20%] rounded text-black p-3 m-2">
-                            {elem.message}
-                            <div className="text-sm text-slate-500 text-right">
-                              {moment(elem.time).format("hh:mm A")}
+                        <React.Fragment key={"image"}>
+                          {elem.attachment == null ? (
+                            <div className="flex justify-start">
+                              <div className="grid text-left bg-white max-w-[80%] min-w-[20%] rounded text-black p-3 m-2">
+                                {elem.message}
+                                <div className="text-sm text-slate-500 text-right">
+                                  {moment(elem.time).format("hh:mm A")}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
+                          ) : (
+                            <div className="flex justify-start">
+                              <div className="bg-gray-200 rounded-lg p-2 m-2 shadow-md max-w-[80%] min-w-[20%]">
+                                {/* Image attachment if present */}
+                                {elem.attachment && (
+                                  <img
+                                    onClick={() => onHandle(elem.attachment)}
+                                    src={elem.attachment}
+                                    alt="attachment"
+                                    className="w-full max-w-xs rounded-md mb-2 object-cover cursor-pointer"
+                                  />
+                                )}
+
+                                {/* Message text bubble */}
+                                <div className="rounded-lg px-4 py-2 text-black">
+                                  <p className="whitespace-pre-wrap break-words">
+                                    {elem.message}
+                                  </p>
+                                  <div className="text-xs text-slate-500 text-right mt-1">
+                                    {moment(elem.time).format("hh:mm A")}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </React.Fragment>
                       ))}
                   </React.Fragment>
                 ))}
@@ -189,29 +286,79 @@ export default function Room() {
               <React.Fragment key={i}>
                 {elem.user_id.length != 0 &&
                   (elem.user_id.includes(conversion.user_id) ? (
-                    <div key={"child" + i} className="flex justify-end">
-                      <div
-                        className="grid justify-items-end bg-blue-200 max-w-[80%] min-w-[20%] rounded  text-black p-3 m-2 "
-                        id="own"
-                      >
-                        {elem.message}
-                        <div className="text-xs text-slate-500 text-right">
-                          {moment(elem.time).format("hh:mm A")}{" "}
+                    <React.Fragment key={"image"}>
+                      {elem.attachment == null ? (
+                        <div className="flex justify-end">
+                          <div className="grid justify-items-end bg-blue-200 max-w-[80%] min-w-[20%] rounded text-black p-3 m-2">
+                            {elem.message}
+                            <div className="text-xs text-slate-500 text-right">
+                              {moment(elem.time).format("hh:mm A")}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
+                      ) : (
+                        <div className="flex justify-end">
+                          <div className="bg-blue-200 rounded-lg p-2 m-2 shadow-md max-w-[80%] min-w-[20%] text-black space-y-2">
+                            {/* Optional attachment image */}
+                            {elem.attachment && (
+                              <img
+                                src={elem.attachment}
+                                onClick={() => onHandle(elem.attachment)}
+                                alt="attachment"
+                                className="w-full max-w-xs rounded-md object-cover cursor-pointer"
+                              />
+                            )}
+
+                            {/* Message & timestamp */}
+                            <div className=" rounded-lg px-4 py-2 text-right">
+                              <p className="whitespace-pre-wrap break-words">
+                                {elem.message}
+                              </p>
+                              <div className="text-xs text-slate-600 mt-1">
+                                {moment(elem.time).format("hh:mm A")}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </React.Fragment>
                   ) : (
-                    <div key={"child" + i} className="flex justify-start">
-                      <div
-                        className="grid justify-items-end bg-white max-w-[80%] min-w-[20%] rounded  text-black p-3 m-2 "
-                        id="others"
-                      >
-                        {elem.message}
-                        <div className="text-sm text-slate-500 text-right">
-                          {moment(elem.time).format("hh:mm A")}{" "}
+                    <React.Fragment key={"image"}>
+                      {elem.attachment == null ? (
+                        <div className="flex justify-start">
+                          <div className="grid text-left bg-white max-w-[80%] min-w-[20%] rounded text-black p-3 m-2">
+                            {elem.message}
+                            <div className="text-sm text-slate-500 text-right">
+                              {moment(elem.time).format("hh:mm A")}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
+                      ) : (
+                        <div className="flex justify-start">
+                          <div className="bg-gray-200 rounded-lg p-2 m-2 shadow-md max-w-[80%] min-w-[20%]">
+                            {/* Image attachment if present */}
+                            {elem.attachment && (
+                              <img
+                                onClick={() => onHandle(elem.attachment)}
+                                src={elem.attachment}
+                                alt="attachment"
+                                className="w-full max-w-xs rounded-md mb-2 object-cover cursor-pointer"
+                              />
+                            )}
+
+                            {/* Message text bubble */}
+                            <div className="rounded-lg px-4 py-2 text-black">
+                              <p className="whitespace-pre-wrap break-words">
+                                {elem.message}
+                              </p>
+                              <div className="text-xs text-slate-500 text-right mt-1">
+                                {moment(elem.time).format("hh:mm A")}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </React.Fragment>
                   ))}
               </React.Fragment>
             ))}
@@ -232,18 +379,41 @@ export default function Room() {
                       </span>
                     </center>
                     {allunreadMsgs.get(elem)?.map((e, i) => (
-                      <React.Fragment key={i}>
-                        <div key={"child" + i} className="flex justify-start">
-                          <div
-                            className="grid justify-items-end bg-white max-w-[80%] min-w-[20%] rounded  text-black p-3 m-2 "
-                            id="others"
-                          >
-                            {e.message}
-                            <div className="text-sm text-slate-500 text-right">
-                              {moment(e.time).format("hh:mm A")}{" "}
+                      <React.Fragment key={"image"}>
+                        {e.attachment == null ? (
+                          <div className="flex justify-start">
+                            <div className="grid text-left bg-white max-w-[80%] min-w-[20%] rounded text-black p-3 m-2">
+                              {e.message}
+                              <div className="text-sm text-slate-500 text-right">
+                                {moment(e.time).format("hh:mm A")}
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        ) : (
+                          <div className="flex justify-start">
+                            <div className="bg-gray-200 rounded-lg p-2 m-2 shadow-md max-w-[80%] min-w-[20%]">
+                              {/* Image attachment if present */}
+                              {e.attachment && (
+                                <img
+                                  src={e.attachment}
+                                  onClick={() => onHandle(e.attachment)}
+                                  alt="attachment"
+                                  className="w-full max-w-xs rounded-md mb-2 object-cover cursor-pointer"
+                                />
+                              )}
+
+                              {/* Message text bubble */}
+                              <div className="rounded-lg px-4 py-2 text-black">
+                                <p className="whitespace-pre-wrap break-words">
+                                  {e.message}
+                                </p>
+                                <div className="text-xs text-slate-500 text-right mt-1">
+                                  {moment(e.time).format("hh:mm A")}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </React.Fragment>
                     ))}
                   </React.Fragment>

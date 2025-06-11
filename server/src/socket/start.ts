@@ -5,7 +5,7 @@
 
 import { DefaultEventsMap, Server, Socket } from "socket.io";
 import { ClientToServer, Message, ServerToClient, User } from "../../../type";
-import { addActiveUser, addConversation, addMessage, deleteActiveUser, deleteConversation, getActiveUser, getallMsgs, getConversation, getMessages, getUnfriendUsers, getUnreadMsgs, getUser, getUsers, updateConversion } from "../db/action";
+import { addActiveUser, addConversation, addMessage, deleteActiveUser, deleteConversation, deleteMessage, getActiveUser, getallMsgs, getConversation, getMessages, getUnfriendUsers, getUnreadMsgs, getUser, getUsers, updateConversion } from "../db/action";
 import { Conversions, Messages } from "../db/schema";
 
 export default function SocketExcetion(io: Server<ClientToServer, ServerToClient, DefaultEventsMap, any>) {
@@ -53,7 +53,7 @@ export default function SocketExcetion(io: Server<ClientToServer, ServerToClient
             socket.emit('getConversion', getConversions);
 
         })
-        socket.on('clientMsg', async ({ from, user_id, reply_ID, to, message, room, time, is_to_readed, is_from_readed }) => {
+        socket.on('clientMsg', async ({ from, user_id, reply_ID, to, message, room, time, is_to_readed, is_from_readed, attachment }) => {
             socket.join(room)
 
             // Check if 'to' is active in the room
@@ -63,11 +63,11 @@ export default function SocketExcetion(io: Server<ClientToServer, ServerToClient
             is_to_readed = recipientActive;
             is_from_readed = true;
 
-            let res = await addMessage({ from, to, reply_ID, message, user_id, time, is_to_readed, is_from_readed, room })
+            let res = await addMessage({ from, to, reply_ID, message, user_id, time, is_to_readed, is_from_readed, room, attachment })
             console.log(socket.id + ' : ' + message)
             await updateConversion(room)
             // Update unread count for receiver if not active
-            io.to(room).emit("serverMsg", { from, user_id, reply_ID, to, message, room, is_to_readed, is_from_readed })
+            io.to(room).emit("serverMsg", { from, user_id, reply_ID, to, message, room, is_to_readed, is_from_readed, attachment })
         })
         socket.on('request', async ({ isSearch = false, room = null, id = '' }) => {
             if (isSearch) {
@@ -108,9 +108,12 @@ export default function SocketExcetion(io: Server<ClientToServer, ServerToClient
                 console.error('Error in markAsRead:', error);
             }
         });
-       socket.on('deleteConversation',async (data)=>{
-        await deleteConversation(data)
-       })
+        socket.on('deleteConversation', async (data) => {
+            await deleteConversation(data)
+        })
+        socket.on('deleteMessage', async (data) => {
+            await deleteMessage(data)
+        })
         socket.on('disconnect', () => {
             deleteActiveUser(socket.id)
             console.log(`Socket disconnected: ${socket.id}`);
